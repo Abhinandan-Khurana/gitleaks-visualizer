@@ -152,10 +152,16 @@
         color: var(--text-color);
       }
 
+      #info-message,
       #error-message {
-        color: var(--danger-color);
         margin-top: 16px;
         font-weight: 500;
+      }
+      #error-message {
+        color: var(--danger-color);
+      }
+      #info-message {
+        color: var(--info-color);
       }
 
       /* Controls Area (Filters & View Options) */
@@ -547,13 +553,17 @@
         id="file-upload-section"
       >
         <div class="collapsible-header">
-          <h2>Upload Gitleaks JSON</h2>
+          <h2>Upload Gitleaks JSON or Load from URL</h2>
           <span class="toggle-icon">-</span>
         </div>
         <div class="collapsible-content">
           <div id="fileDropZone" class="file-drop-zone">
             <p>
               Drag & drop your Gitleaks JSON file here, or click to select file.
+            </p>
+            <p>
+              Alternatively, append <code>?reportUrl=YOUR_JSON_URL</code> to the
+              address bar to load remotely.
             </p>
             <label
               for="fileInput"
@@ -570,6 +580,7 @@
             />
             <p id="file-name-display" class="mt-1"></p>
           </div>
+          <div id="info-message" role="status"></div>
           <div id="error-message" role="alert"></div>
         </div>
       </section>
@@ -692,23 +703,13 @@
               and filtering.
             </li>
             <li>
-              <strong>Automated Reporting (Advanced):</strong> For more advanced
-              integration, you could host this HTML visualizer on a static site.
-              <ul>
-                <li>
-                  You could potentially modify this page to accept a URL to a
-                  Gitleaks JSON file via query parameter (e.g.,
-                  <code
-                    >visualizer.html?reportUrl=https://your-ci.com/artifacts/gitleaks-report.json</code
-                  >). This requires CORS considerations if the report is on a
-                  different domain.
-                </li>
-                <li>
-                  Alternatively, your CI/CD pipeline could generate a
-                  self-contained HTML report by embedding the JSON data directly
-                  into a template similar to this one.
-                </li>
-              </ul>
+              <strong>Load from URL:</strong> If your CI/CD system can host the
+              JSON artifact at a stable, publicly accessible URL (with CORS
+              headers enabled), you can load it directly using the
+              <code>?reportUrl=YOUR_JSON_URL</code> query parameter.
+              <strong>Important:</strong> The server hosting the JSON file must
+              have CORS (Cross-Origin Resource Sharing) enabled to allow this
+              visualizer to fetch the data.
             </li>
             <li>
               <strong>Purpose:</strong> This tool helps in triaging findings,
@@ -731,9 +732,9 @@
           <div id="leaks-summary"></div>
         </div>
         <div id="leaks-container">
-          <!-- Placeholder or initial message -->
           <p class="text-center initial-message">
-            Please upload a Gitleaks JSON file to view results. Use the controls
+            Please upload a Gitleaks JSON file or use the
+            <code>?reportUrl=</code> parameter to view results. Use the controls
             above to filter and sort.
           </p>
         </div>
@@ -787,6 +788,7 @@
       const fileInput = document.getElementById("fileInput");
       const fileDropZone = document.getElementById("fileDropZone");
       const fileNameDisplay = document.getElementById("file-name-display");
+      const infoMessageElement = document.getElementById("info-message");
       const errorMessageElement = document.getElementById("error-message");
       const leaksContainer = document.getElementById("leaks-container");
       const visualizationHeading = document.getElementById(
@@ -837,14 +839,12 @@
             header.setAttribute("aria-expanded", "true");
           }
         });
-        // Set initial ARIA state
         const content = header.nextElementSibling;
         header.setAttribute(
           "aria-expanded",
           !content.classList.contains("collapsed"),
         );
       });
-      // Default controls section to collapsed
       const controlsSectionContent = document
         .getElementById("controls-section")
         .querySelector(".collapsible-content");
@@ -854,7 +854,6 @@
         .getElementById("controls-section")
         .querySelector(".toggle-icon");
       if (controlsToggleIcon) controlsToggleIcon.textContent = "+";
-      // Default CI/CD section to collapsed
       const cicdSectionContent = document
         .getElementById("cicd-info-section")
         .querySelector(".collapsible-content");
@@ -873,7 +872,9 @@
 
       function handleFileSelect(event) {
         const file = event.target.files[0];
-        processFile(file);
+        if (file) {
+          processLocalFile(file);
+        }
       }
 
       function handleDragOver(event) {
@@ -893,70 +894,110 @@
         event.stopPropagation();
         fileDropZone.classList.remove("dragover");
         const file = event.dataTransfer.files[0];
-        processFile(file);
-      }
-
-      function processFile(file) {
         if (file) {
-          fileNameDisplay.textContent = `File: ${file.name}`;
-          errorMessageElement.textContent = "";
-          if (file.type === "application/json") {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-              try {
-                const jsonData = JSON.parse(e.target.result);
-                if (Array.isArray(jsonData)) {
-                  allLeaksData = jsonData.map((leak, index) => ({
-                    ...leak,
-                    originalIndex: index,
-                  })); // Store original index for modal
-                  applyAllControls(); // Display with default filters/sort
-                  // Open the file upload section if it was collapsed
-                  const fileUploadContent = document
-                    .getElementById("file-upload-section")
-                    .querySelector(".collapsible-content");
-                  const fileUploadIcon = document
-                    .getElementById("file-upload-section")
-                    .querySelector(".toggle-icon");
-                  if (fileUploadContent.classList.contains("collapsed")) {
-                    fileUploadContent.classList.remove("collapsed");
-                    fileUploadIcon.textContent = "-";
-                  }
-                } else {
-                  throw new Error(
-                    "JSON data is not an array. Expected an array of leak objects.",
-                  );
-                }
-              } catch (error) {
-                console.error("Error parsing JSON:", error);
-                errorMessageElement.textContent = `Error parsing JSON: ${error.message}. Please ensure it's a valid Gitleaks JSON output.`;
-                clearLeaksDisplay(true, "Error parsing file.");
-              }
-            };
-            reader.onerror = function () {
-              console.error("Error reading file");
-              errorMessageElement.textContent = "Error reading file.";
-              clearLeaksDisplay(true, "Error reading file.");
-            };
-            reader.readAsText(file);
-          } else {
-            errorMessageElement.textContent =
-              "Invalid file type. Please upload a JSON file.";
-            fileNameDisplay.textContent = "";
-            clearLeaksDisplay(true, "Invalid file type.");
-          }
+          processLocalFile(file);
         }
       }
 
+      function processLocalFile(file) {
+        infoMessageElement.textContent = "";
+        errorMessageElement.textContent = "";
+        if (file.type === "application/json") {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            try {
+              const jsonData = JSON.parse(e.target.result);
+              handleJsonData(jsonData, `File: ${file.name}`);
+            } catch (error) {
+              console.error("Error parsing JSON from file:", error);
+              handleJsonError(
+                `Error parsing JSON from ${file.name}: ${error.message}. Please ensure it's a valid Gitleaks JSON output.`,
+              );
+            }
+          };
+          reader.onerror = function () {
+            console.error("Error reading file");
+            handleJsonError(`Error reading file: ${file.name}.`);
+          };
+          reader.readAsText(file);
+        } else {
+          handleJsonError("Invalid file type. Please upload a JSON file.");
+          fileNameDisplay.textContent = "";
+        }
+      }
+
+      async function fetchReportFromUrl(url) {
+        infoMessageElement.textContent = `Attempting to load report from: ${sanitizeHTML(url)}...`;
+        errorMessageElement.textContent = "";
+        fileNameDisplay.textContent = ""; // Clear previous file name
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(
+              `Network response was not ok: ${response.status} ${response.statusText}`,
+            );
+          }
+          const jsonData = await response.json();
+          handleJsonData(jsonData, `URL: ${sanitizeHTML(url)}`);
+          infoMessageElement.textContent = `Successfully loaded report from: ${sanitizeHTML(url)}`;
+        } catch (error) {
+          console.error("Error fetching or parsing report from URL:", error);
+          let detailedError = `Failed to load report from URL: ${sanitizeHTML(url)}. Error: ${error.message}.`;
+          if (
+            error.message.toLowerCase().includes("failed to fetch") ||
+            error.message.toLowerCase().includes("networkerror")
+          ) {
+            detailedError +=
+              " This might be a CORS issue or network problem. Ensure the server at the URL has CORS enabled for this domain.";
+          }
+          handleJsonError(detailedError);
+          infoMessageElement.textContent = ""; // Clear info message on error
+        }
+      }
+
+      function handleJsonData(jsonData, sourceName) {
+        if (Array.isArray(jsonData)) {
+          allLeaksData = jsonData.map((leak, index) => ({
+            ...leak,
+            originalIndex: index,
+          }));
+          applyAllControls();
+          fileNameDisplay.textContent = `Source: ${sourceName}`; // Display file name or URL
+          errorMessageElement.textContent = ""; // Clear previous errors
+          // Open the file upload section if it was collapsed
+          const fileUploadContent = document
+            .getElementById("file-upload-section")
+            .querySelector(".collapsible-content");
+          const fileUploadIcon = document
+            .getElementById("file-upload-section")
+            .querySelector(".toggle-icon");
+          if (fileUploadContent.classList.contains("collapsed")) {
+            fileUploadContent.classList.remove("collapsed");
+            fileUploadIcon.textContent = "-";
+          }
+        } else {
+          throw new Error(
+            "JSON data is not an array. Expected an array of leak objects.",
+          );
+        }
+      }
+
+      function handleJsonError(message) {
+        errorMessageElement.textContent = message;
+        clearLeaksDisplay(true, message); // true to indicate error, pass message
+      }
+
       function clearLeaksDisplay(isError = false, message) {
-        leaksContainer.innerHTML = `<p class="text-center initial-message">${message || "Please upload a Gitleaks JSON file to view results. Use the controls above to filter and sort."}</p>`;
+        leaksContainer.innerHTML = `<p class="text-center initial-message">${message || "Please upload a Gitleaks JSON file or use the ?reportUrl= parameter to view results. Use the controls above to filter and sort."}</p>`;
         visualizationHeading.style.display = "none";
         leaksSummary.textContent = "";
         allLeaksData = [];
         currentlyDisplayedLeaks = [];
         if (!isError) {
-          // if not an error, also clear file name
+          // if not an error, also clear file name and messages
           fileNameDisplay.textContent = "";
+          infoMessageElement.textContent = "";
+          errorMessageElement.textContent = "";
         }
       }
 
@@ -976,14 +1017,9 @@
         filterCommitInput.value = "";
         filterDateStartInput.value = "";
         filterDateEndInput.value = "";
-        // sortBySelect.value = 'date-desc'; // Optionally reset sort
-        // viewShowAuthorCheckbox.checked = true; // Optionally reset view toggles
-        // viewShowCommitCheckbox.checked = false;
-        // viewShowEntropyCheckbox.checked = false;
         applyAllControls();
       });
 
-      // Also apply on checkbox/select changes for view options for immediate feedback
       [
         sortBySelect,
         viewShowAuthorCheckbox,
@@ -994,16 +1030,25 @@
       });
 
       function applyAllControls() {
-        if (allLeaksData.length === 0 && !fileNameDisplay.textContent) {
-          // No file loaded yet
-          clearLeaksDisplay(false, "Please upload a Gitleaks JSON file first.");
-          return;
-        }
-        if (allLeaksData.length === 0 && fileNameDisplay.textContent) {
-          // File loaded but was empty
+        if (
+          allLeaksData.length === 0 &&
+          !fileNameDisplay.textContent &&
+          !infoMessageElement.textContent.includes("Attempting to load")
+        ) {
           clearLeaksDisplay(
             false,
-            `No leaks found in ${fileNameDisplay.textContent.replace("File: ", "")}.`,
+            "Please upload a Gitleaks JSON file or use the ?reportUrl= parameter.",
+          );
+          return;
+        }
+        if (
+          allLeaksData.length === 0 &&
+          (fileNameDisplay.textContent ||
+            infoMessageElement.textContent.includes("Successfully loaded"))
+        ) {
+          clearLeaksDisplay(
+            false,
+            `No leaks found in the provided source: ${fileNameDisplay.textContent.replace("Source: ", "")}.`,
           );
           return;
         }
@@ -1048,7 +1093,6 @@
         }
         const dateEndFilter = filterDateEndInput.value;
         if (dateEndFilter) {
-          // Add 1 day to include the selected end date fully
           const endDate = new Date(dateEndFilter);
           endDate.setDate(endDate.getDate() + 1);
           filteredLeaks = filteredLeaks.filter(
@@ -1089,15 +1133,19 @@
 
       // Display Leaks Logic
       function displayLeaks(leaks) {
-        leaksContainer.innerHTML = ""; // Clear previous leaks or placeholders
+        leaksContainer.innerHTML = "";
         const initialMessage = leaksContainer.querySelector(".initial-message");
         if (initialMessage) initialMessage.remove();
 
-        if (leaks.length === 0) {
+        if (leaks.length === 0 && allLeaksData.length > 0) {
+          // Data loaded, but filters cleared it
           leaksContainer.innerHTML =
             '<p class="text-center">No leaks match the current filters.</p>';
-          visualizationHeading.style.display = "block"; // Keep heading visible
-          leaksSummary.textContent = `Displaying 0 of ${allLeaksData.length} total leaks.`;
+        } else if (leaks.length === 0) {
+          // No data loaded or data was empty
+          // Initial message is handled by clearLeaksDisplay or fetch attempt messages
+          visualizationHeading.style.display = "none";
+          leaksSummary.textContent = "";
           return;
         }
 
@@ -1109,14 +1157,13 @@
         const showEntropy = viewShowEntropyCheckbox.checked;
 
         leaks.forEach((leak) => {
-          // Use originalIndex from the filtered leak data
           const card = document.createElement("div");
           card.classList.add("leak-card");
           const ruleClass = `rule-${sanitizeHTML(leak.RuleID || "unknown")
             .toLowerCase()
             .replace(/[^a-z0-9-_]/g, "-")}`;
           card.classList.add(ruleClass);
-          card.setAttribute("data-original-index", leak.originalIndex); // Use originalIndex
+          card.setAttribute("data-original-index", leak.originalIndex);
           card.setAttribute("role", "button");
           card.setAttribute("tabindex", "0");
           card.setAttribute(
@@ -1181,7 +1228,6 @@
 
       // Modal Logic
       function openModal(originalIndex) {
-        // Use originalIndex to fetch from allLeaksData
         const leak = allLeaksData.find(
           (l) => l.originalIndex === originalIndex,
         );
@@ -1241,8 +1287,17 @@
         }
       });
 
-      // Initialize display
-      clearLeaksDisplay();
+      // Initial Load Logic
+      document.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const reportUrlFromQuery = urlParams.get("reportUrl");
+
+        if (reportUrlFromQuery) {
+          fetchReportFromUrl(reportUrlFromQuery);
+        } else {
+          clearLeaksDisplay(); // Initialize with default message if no URL
+        }
+      });
     </script>
   </body>
 </html>
