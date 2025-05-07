@@ -1,0 +1,23 @@
+[
+    {
+        "Description": "Detected a JWT token...",
+        "StartLine": 1310,
+        "EndLine": 1310,
+        "StartColumn": 1,
+        "EndColumn": 100,
+        "Match": "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+        "Secret": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+        "File": "example-web/WebContent/WEB-INF/Main.properties",
+        "SymlinkFile": "",
+        "Commit": "xxxxxxxxeb8fc0a4ee49bdd75ddee8xxxxxxxxxx",
+        "Entropy": 4.123,
+        "Author": "JohnDoe",
+        "Email": "john.doe@example.com",
+        "Date": "2020-05-02T05:28:45Z",
+        "Message": "Merge changes from release/beta...",
+        "Tags": [],
+        "RuleID": "jwt",
+        "Fingerprint": "xxxxxxxxeb8fc0a4ee49bdd75ddee8xxxxxxxxxx:..."
+      }
+
+]

@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced Gitleaks JSON Visualizer</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #4a90e2;
+        --secondary-color: #d0e6f1;
+        --accent-color: #f5a623;
+        --background-color: #ffffff;
+        --text-color: #333333;
+        --danger-color: #d0021b;
+        --warning-color: #f5a623;
+        --info-color: #4a90e2;
+        --success-color: #7ed321;
+        --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        --border-radius: 8px;
+        --input-border-color: #ced4da;
+      }
+
+      body {
+        font-family: "Roboto", sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      /* Header */
+      .header {
+        background-color: var(--primary-color);
+        color: var(--background-color);
+        padding: 24px;
+        text-align: center;
+        border-bottom-left-radius: var(--border-radius);
+        border-bottom-right-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        margin-bottom: 24px;
+      }
+
+      .header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      /* Collapsible Section General Style */
+      .collapsible-section {
+        background-color: var(--background-color);
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        margin-bottom: 24px;
+        overflow: hidden;
+      }
+
+      .collapsible-header {
+        background-color: #f8f9fa;
+        padding: 12px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .collapsible-header h2,
+      .collapsible-header h3 {
+        font-size: 20px;
+        font-weight: 500;
+        margin: 0;
+        color: var(--primary-color);
+      }
+
+      .collapsible-header .toggle-icon {
+        font-size: 18px;
+        transition: transform 0.3s ease;
+      }
+
+      .collapsible-content {
+        padding: 20px;
+        display: block; /* Default open, can be changed by JS */
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .collapsible-content.collapsed {
+        display: none;
+      }
+
+      /* File Uploader */
+      .file-uploader-area .collapsible-content {
+        /* Adjusted to fit new structure */
+        text-align: center;
+      }
+
+      .file-drop-zone {
+        border: 3px dashed var(--secondary-color);
+        border-radius: var(--border-radius);
+        padding: 40px;
+        cursor: pointer;
+        transition:
+          background-color 0.3s ease,
+          border-color 0.3s ease;
+        margin-top: 16px;
+      }
+
+      .file-drop-zone.dragover {
+        background-color: var(--secondary-color);
+        border-color: var(--primary-color);
+      }
+
+      .file-drop-zone p {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+      }
+
+      .file-input-label {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: var(--primary-color);
+        color: var(--background-color);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+      }
+
+      .file-input-label:hover {
+        background-color: #357abd; /* Darker primary */
+      }
+
+      #fileInput {
+        display: none;
+      }
+
+      #file-name-display {
+        margin-top: 16px;
+        font-size: 14px;
+        color: var(--text-color);
+      }
+
+      #error-message {
+        color: var(--danger-color);
+        margin-top: 16px;
+        font-weight: 500;
+      }
+
+      /* Controls Area (Filters & View Options) */
+      .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .control-group {
+        margin-bottom: 15px;
+      }
+
+      .control-group label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 6px;
+        font-size: 14px;
+        color: #555;
+      }
+
+      .control-group input[type="text"],
+      .control-group input[type="date"],
+      .control-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--input-border-color);
+        border-radius: var(--border-radius);
+        box-sizing: border-box;
+        font-size: 14px;
+      }
+
+      .control-group input[type="text"]:focus,
+      .control-group input[type="date"]:focus,
+      .control-group select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+      }
+
+      .checkbox-group label {
+        font-weight: normal;
+        margin-left: 8px;
+        font-size: 14px;
+      }
+      .checkbox-group input[type="checkbox"] {
+        margin-right: 5px;
+        vertical-align: middle;
+      }
+
+      .action-buttons {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .action-buttons button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition:
+          background-color 0.3s ease,
+          opacity 0.3s ease;
+      }
+
+      #apply-filters-button {
+        background-color: var(--primary-color);
+        color: var(--background-color);
+      }
+      #apply-filters-button:hover {
+        background-color: #357abd;
+      }
+
+      #clear-filters-button {
+        background-color: var(--accent-color);
+        color: var(--background-color);
+      }
+      #clear-filters-button:hover {
+        background-color: #d9901f;
+      }
+
+      /* Visualization Area */
+      .visualization-area-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .visualization-area-header h3 {
+        font-size: 20px;
+        font-weight: 500;
+        color: var(--primary-color);
+        margin: 0;
+      }
+
+      #leaks-summary {
+        font-size: 14px;
+        color: var(--text-color);
+      }
+
+      #leaks-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 24px;
+      }
+
+      .leak-card {
+        background-color: var(--background-color);
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        padding: 20px;
+        cursor: pointer;
+        transition:
+          transform 0.2s ease-in-out,
+          box-shadow 0.2s ease-in-out;
+        border-left: 5px solid var(--info-color); /* Default border */
+        display: flex;
+        flex-direction: column;
+      }
+
+      .leak-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+      }
+
+      .leak-card h4 {
+        /* RuleID */
+        font-size: 18px;
+        font-weight: 500;
+        margin-top: 0;
+        margin-bottom: 12px;
+        color: var(--primary-color);
+        word-break: break-all;
+      }
+
+      .leak-card p {
+        font-size: 14px;
+        margin-bottom: 8px;
+        word-break: break-word;
+        flex-grow: 1; /* Allow p to grow if content is short */
+      }
+
+      .leak-card .label {
+        font-weight: 500;
+        color: #555;
+      }
+
+      .leak-card .value {
+        color: var(--text-color);
+      }
+
+      .leak-card .secret-match {
+        background-color: #f9f2f4;
+        color: var(--danger-color);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 13px;
+        display: inline-block;
+        word-break: break-all;
+      }
+
+      .leak-card .card-footer-text {
+        font-size: 12px;
+        color: #777;
+        margin-top: auto; /* Pushes to bottom */
+        padding-top: 10px;
+      }
+
+      /* Color coding for rules - can be extended */
+      .leak-card.rule-jwt {
+        border-left-color: var(--danger-color);
+      }
+      .leak-card.rule-jwt h4 {
+        color: var(--danger-color);
+      }
+      .leak-card.rule-generic-api-key {
+        border-left-color: var(--warning-color);
+      }
+      .leak-card.rule-generic-api-key h4 {
+        color: var(--warning-color);
+      }
+      .leak-card.rule-aws-access-key {
+        border-left-color: #ff9900;
+      }
+      .leak-card.rule-aws-access-key h4 {
+        color: #ff9900;
+      }
+      .leak-card.rule-google-api-key {
+        border-left-color: #4285f4;
+      }
+      .leak-card.rule-google-api-key h4 {
+        color: #4285f4;
+      }
+      .leak-card.rule-ssh-private-key {
+        border-left-color: #d81b60;
+      }
+      .leak-card.rule-ssh-private-key h4 {
+        color: #d81b60;
+      }
+      .leak-card.rule-slack-token {
+        border-left-color: #3aaf85;
+      }
+      .leak-card.rule-slack-token h4 {
+        color: #3aaf85;
+      }
+
+      /* Modal */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.6);
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        background-color: var(--background-color);
+        margin: auto;
+        padding: 24px 32px;
+        border-radius: var(--border-radius);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        width: 80%;
+        max-width: 700px;
+        animation: slideDown 0.4s ease-out;
+        max-height: 85vh;
+        overflow-y: auto;
+      }
+
+      @keyframes slideDown {
+        from {
+          transform: translateY(-50px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--secondary-color);
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+      }
+
+      .modal-header h2 {
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--primary-color);
+        margin: 0;
+      }
+
+      .close-button {
+        color: #aaa;
+        font-size: 32px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .close-button:hover,
+      .close-button:focus {
+        color: var(--text-color);
+      }
+
+      .modal-body p {
+        font-size: 15px;
+        margin-bottom: 10px;
+        word-break: break-word;
+      }
+      .modal-body .label {
+        font-weight: 500;
+        color: var(--primary-color);
+        min-width: 120px;
+        display: inline-block;
+      }
+      .modal-body .value {
+        color: var(--text-color);
+      }
+      .modal-body .value.secret,
+      .modal-body .value.match {
+        font-family: "Courier New", Courier, monospace;
+        background-color: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
+        max-width: calc(100% - 130px);
+        overflow-wrap: break-word;
+        white-space: pre-wrap;
+      }
+
+      .recommendation {
+        margin-top: 20px;
+        padding: 12px;
+        background-color: var(--secondary-color);
+        border-left: 4px solid var(--accent-color);
+        border-radius: 4px;
+      }
+      .recommendation h5 {
+        margin-top: 0;
+        color: var(--accent-color);
+        font-size: 16px;
+      }
+
+      /* CI/CD Info Section */
+      .cicd-info ul {
+        padding-left: 20px;
+      }
+      .cicd-info li {
+        margin-bottom: 8px;
+      }
+      .cicd-info code {
+        background-color: #e9ecef;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-family: "Courier New", Courier, monospace;
+      }
+
+      /* Footer */
+      .footer {
+        text-align: center;
+        padding: 20px;
+        margin-top: 32px;
+        font-size: 14px;
+        color: #777;
+      }
+
+      /* Utility classes */
+      .text-center {
+        text-align: center;
+      }
+      .mt-1 {
+        margin-top: 8px;
+      }
+      .mb-1 {
+        margin-bottom: 8px;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .container {
+          padding: 16px;
+        }
+        .controls-grid {
+          grid-template-columns: 1fr; /* Single column for controls on smaller screens */
+        }
+        #leaks-container {
+          grid-template-columns: 1fr;
+        }
+        .modal-content {
+          width: 95%;
+          padding: 20px;
+        }
+        .modal-body .label {
+          display: block;
+          margin-bottom: 4px;
+        }
+        .modal-body .value.secret,
+        .modal-body .value.match {
+          max-width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <h1>Advanced Gitleaks Report Visualizer</h1>
+    </header>
+
+    <div class="container">
+      <section
+        class="collapsible-section file-uploader-area"
+        id="file-upload-section"
+      >
+        <div class="collapsible-header">
+          <h2>Upload Gitleaks JSON</h2>
+          <span class="toggle-icon">-</span>
+        </div>
+        <div class="collapsible-content">
+          <div id="fileDropZone" class="file-drop-zone">
+            <p>
+              Drag & drop your Gitleaks JSON file here, or click to select file.
+            </p>
+            <label
+              for="fileInput"
+              class="file-input-label"
+              role="button"
+              tabindex="0"
+              >Select File</label
+            >
+            <input
+              type="file"
+              id="fileInput"
+              accept=".json"
+              aria-label="Gitleaks JSON file input"
+            />
+            <p id="file-name-display" class="mt-1"></p>
+          </div>
+          <div id="error-message" role="alert"></div>
+        </div>
+      </section>
+
+      <section class="collapsible-section" id="controls-section">
+        <div class="collapsible-header">
+          <h3>Filters & View Options</h3>
+          <span class="toggle-icon">+</span>
+        </div>
+        <div class="collapsible-content collapsed">
+          <div class="controls-grid">
+            <div class="control-group">
+              <label for="filter-rule-id">RuleID (contains):</label>
+              <input
+                type="text"
+                id="filter-rule-id"
+                placeholder="e.g., generic-api-key"
+              />
+            </div>
+            <div class="control-group">
+              <label for="filter-file-path">File Path (contains):</label>
+              <input
+                type="text"
+                id="filter-file-path"
+                placeholder="e.g., /config/.env"
+              />
+            </div>
+            <div class="control-group">
+              <label for="filter-author">Author (contains):</label>
+              <input
+                type="text"
+                id="filter-author"
+                placeholder="e.g., John Doe"
+              />
+            </div>
+            <div class="control-group">
+              <label for="filter-commit">Commit Hash (contains):</label>
+              <input
+                type="text"
+                id="filter-commit"
+                placeholder="e.g., a1b2c3d"
+              />
+            </div>
+            <div class="control-group">
+              <label for="filter-date-start">Date From:</label>
+              <input type="date" id="filter-date-start" />
+            </div>
+            <div class="control-group">
+              <label for="filter-date-end">Date To:</label>
+              <input type="date" id="filter-date-end" />
+            </div>
+          </div>
+
+          <h4>View Options</h4>
+          <div class="controls-grid">
+            <div class="control-group">
+              <label for="sort-by">Sort By:</label>
+              <select id="sort-by">
+                <option value="date-desc">Date (Newest First)</option>
+                <option value="date-asc">Date (Oldest First)</option>
+                <option value="rule-id-asc">RuleID (A-Z)</option>
+                <option value="file-asc">File (A-Z)</option>
+                <option value="entropy-desc">Entropy (High to Low)</option>
+                <option value="entropy-asc">Entropy (Low to High)</option>
+              </select>
+            </div>
+            <div class="control-group checkbox-group">
+              <label>Show on Card:</label>
+              <div>
+                <input type="checkbox" id="view-show-author" checked />
+                <label for="view-show-author">Author</label>
+              </div>
+              <div>
+                <input type="checkbox" id="view-show-commit" />
+                <label for="view-show-commit">Commit Hash</label>
+              </div>
+              <div>
+                <input type="checkbox" id="view-show-entropy" />
+                <label for="view-show-entropy">Entropy</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button id="apply-filters-button">Apply Filters & View</button>
+            <button id="clear-filters-button">Clear All Filters</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="collapsible-section" id="cicd-info-section">
+        <div class="collapsible-header">
+          <h3>CI/CD Integration & Usage</h3>
+          <span class="toggle-icon">+</span>
+        </div>
+        <div class="collapsible-content cicd-info collapsed">
+          <p>
+            This visualizer is a client-side tool designed to help you analyze
+            Gitleaks JSON reports. Here's how it can fit into your CI/CD
+            workflow:
+          </p>
+          <ul>
+            <li>
+              <strong>Run Gitleaks in CI/CD:</strong> Integrate Gitleaks
+              scanning into your CI/CD pipeline (e.g., Jenkins, GitLab CI,
+              GitHub Actions). Example command:
+              <code
+                >gitleaks detect --report-format json --report-path
+                gitleaks-report.json -v</code
+              >
+            </li>
+            <li>
+              <strong>Artifact Storage:</strong> Configure your CI/CD job to
+              save the <code>gitleaks-report.json</code> file as a build
+              artifact.
+            </li>
+            <li>
+              <strong>Manual Upload:</strong> Download the JSON artifact from
+              your CI/CD system and upload it here for detailed visualization
+              and filtering.
+            </li>
+            <li>
+              <strong>Automated Reporting (Advanced):</strong> For more advanced
+              integration, you could host this HTML visualizer on a static site.
+              <ul>
+                <li>
+                  You could potentially modify this page to accept a URL to a
+                  Gitleaks JSON file via query parameter (e.g.,
+                  <code
+                    >visualizer.html?reportUrl=https://your-ci.com/artifacts/gitleaks-report.json</code
+                  >). This requires CORS considerations if the report is on a
+                  different domain.
+                </li>
+                <li>
+                  Alternatively, your CI/CD pipeline could generate a
+                  self-contained HTML report by embedding the JSON data directly
+                  into a template similar to this one.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Purpose:</strong> This tool helps in triaging findings,
+              understanding patterns (e.g., frequent offenders, common rule
+              IDs), and makes the raw JSON output more accessible to security
+              teams and developers.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section
+        class="visualization-area"
+        aria-labelledby="visualization-heading"
+      >
+        <div class="visualization-area-header">
+          <h3 id="visualization-heading" style="display: none">
+            Detected Leaks
+          </h3>
+          <div id="leaks-summary"></div>
+        </div>
+        <div id="leaks-container">
+          <!-- Placeholder or initial message -->
+          <p class="text-center initial-message">
+            Please upload a Gitleaks JSON file to view results. Use the controls
+            above to filter and sort.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <div
+      id="leakModal"
+      class="modal"
+      aria-labelledby="modalTitle"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">Leak Details</h2>
+          <span
+            class="close-button"
+            role="button"
+            tabindex="0"
+            aria-label="Close modal"
+            >&times;</span
+          >
+        </div>
+        <div class="modal-body" id="modalBody">
+          <!-- Detailed leak information will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>
+        &copy; <span id="currentYear"></span> Advanced Gitleaks Visualizer.
+        Today's Date: <span id="currentDate"></span>
+      </p>
+    </footer>
+
+    <script>
+      // Set current year and date in footer
+      document.getElementById("currentYear").textContent =
+        new Date().getFullYear();
+      document.getElementById("currentDate").textContent =
+        new Date().toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+
+      // DOM Elements
+      const fileInput = document.getElementById("fileInput");
+      const fileDropZone = document.getElementById("fileDropZone");
+      const fileNameDisplay = document.getElementById("file-name-display");
+      const errorMessageElement = document.getElementById("error-message");
+      const leaksContainer = document.getElementById("leaks-container");
+      const visualizationHeading = document.getElementById(
+        "visualization-heading",
+      );
+      const leaksSummary = document.getElementById("leaks-summary");
+
+      const modal = document.getElementById("leakModal");
+      const modalBody = document.getElementById("modalBody");
+      const modalTitle = document.getElementById("modalTitle");
+      const closeButton = document.querySelector(".close-button");
+
+      // Filter & View Controls
+      const filterRuleIdInput = document.getElementById("filter-rule-id");
+      const filterFilePathInput = document.getElementById("filter-file-path");
+      const filterAuthorInput = document.getElementById("filter-author");
+      const filterCommitInput = document.getElementById("filter-commit");
+      const filterDateStartInput = document.getElementById("filter-date-start");
+      const filterDateEndInput = document.getElementById("filter-date-end");
+      const sortBySelect = document.getElementById("sort-by");
+      const viewShowAuthorCheckbox =
+        document.getElementById("view-show-author");
+      const viewShowCommitCheckbox =
+        document.getElementById("view-show-commit");
+      const viewShowEntropyCheckbox =
+        document.getElementById("view-show-entropy");
+      const applyFiltersButton = document.getElementById(
+        "apply-filters-button",
+      );
+      const clearFiltersButton = document.getElementById(
+        "clear-filters-button",
+      );
+
+      let allLeaksData = [];
+      let currentlyDisplayedLeaks = [];
+
+      // Collapsible Sections Logic
+      document.querySelectorAll(".collapsible-header").forEach((header) => {
+        header.addEventListener("click", () => {
+          const content = header.nextElementSibling;
+          const icon = header.querySelector(".toggle-icon");
+          content.classList.toggle("collapsed");
+          if (content.classList.contains("collapsed")) {
+            icon.textContent = "+";
+            header.setAttribute("aria-expanded", "false");
+          } else {
+            icon.textContent = "-";
+            header.setAttribute("aria-expanded", "true");
+          }
+        });
+        // Set initial ARIA state
+        const content = header.nextElementSibling;
+        header.setAttribute(
+          "aria-expanded",
+          !content.classList.contains("collapsed"),
+        );
+      });
+      // Default controls section to collapsed
+      const controlsSectionContent = document
+        .getElementById("controls-section")
+        .querySelector(".collapsible-content");
+      if (controlsSectionContent)
+        controlsSectionContent.classList.add("collapsed");
+      const controlsToggleIcon = document
+        .getElementById("controls-section")
+        .querySelector(".toggle-icon");
+      if (controlsToggleIcon) controlsToggleIcon.textContent = "+";
+      // Default CI/CD section to collapsed
+      const cicdSectionContent = document
+        .getElementById("cicd-info-section")
+        .querySelector(".collapsible-content");
+      if (cicdSectionContent) cicdSectionContent.classList.add("collapsed");
+      const cicdToggleIcon = document
+        .getElementById("cicd-info-section")
+        .querySelector(".toggle-icon");
+      if (cicdToggleIcon) cicdToggleIcon.textContent = "+";
+
+      // File Upload Logic
+      fileInput.addEventListener("change", handleFileSelect);
+      fileDropZone.addEventListener("click", () => fileInput.click());
+      fileDropZone.addEventListener("dragover", handleDragOver);
+      fileDropZone.addEventListener("dragleave", handleDragLeave);
+      fileDropZone.addEventListener("drop", handleFileDrop);
+
+      function handleFileSelect(event) {
+        const file = event.target.files[0];
+        processFile(file);
+      }
+
+      function handleDragOver(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        fileDropZone.classList.add("dragover");
+      }
+
+      function handleDragLeave(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        fileDropZone.classList.remove("dragover");
+      }
+
+      function handleFileDrop(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        fileDropZone.classList.remove("dragover");
+        const file = event.dataTransfer.files[0];
+        processFile(file);
+      }
+
+      function processFile(file) {
+        if (file) {
+          fileNameDisplay.textContent = `File: ${file.name}`;
+          errorMessageElement.textContent = "";
+          if (file.type === "application/json") {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              try {
+                const jsonData = JSON.parse(e.target.result);
+                if (Array.isArray(jsonData)) {
+                  allLeaksData = jsonData.map((leak, index) => ({
+                    ...leak,
+                    originalIndex: index,
+                  })); // Store original index for modal
+                  applyAllControls(); // Display with default filters/sort
+                  // Open the file upload section if it was collapsed
+                  const fileUploadContent = document
+                    .getElementById("file-upload-section")
+                    .querySelector(".collapsible-content");
+                  const fileUploadIcon = document
+                    .getElementById("file-upload-section")
+                    .querySelector(".toggle-icon");
+                  if (fileUploadContent.classList.contains("collapsed")) {
+                    fileUploadContent.classList.remove("collapsed");
+                    fileUploadIcon.textContent = "-";
+                  }
+                } else {
+                  throw new Error(
+                    "JSON data is not an array. Expected an array of leak objects.",
+                  );
+                }
+              } catch (error) {
+                console.error("Error parsing JSON:", error);
+                errorMessageElement.textContent = `Error parsing JSON: ${error.message}. Please ensure it's a valid Gitleaks JSON output.`;
+                clearLeaksDisplay(true, "Error parsing file.");
+              }
+            };
+            reader.onerror = function () {
+              console.error("Error reading file");
+              errorMessageElement.textContent = "Error reading file.";
+              clearLeaksDisplay(true, "Error reading file.");
+            };
+            reader.readAsText(file);
+          } else {
+            errorMessageElement.textContent =
+              "Invalid file type. Please upload a JSON file.";
+            fileNameDisplay.textContent = "";
+            clearLeaksDisplay(true, "Invalid file type.");
+          }
+        }
+      }
+
+      function clearLeaksDisplay(isError = false, message) {
+        leaksContainer.innerHTML = `<p class="text-center initial-message">${message || "Please upload a Gitleaks JSON file to view results. Use the controls above to filter and sort."}</p>`;
+        visualizationHeading.style.display = "none";
+        leaksSummary.textContent = "";
+        allLeaksData = [];
+        currentlyDisplayedLeaks = [];
+        if (!isError) {
+          // if not an error, also clear file name
+          fileNameDisplay.textContent = "";
+        }
+      }
+
+      function sanitizeHTML(str) {
+        if (typeof str !== "string") str = String(str);
+        const temp = document.createElement("div");
+        temp.textContent = str;
+        return temp.innerHTML;
+      }
+
+      // Filtering and Sorting Logic
+      applyFiltersButton.addEventListener("click", applyAllControls);
+      clearFiltersButton.addEventListener("click", () => {
+        filterRuleIdInput.value = "";
+        filterFilePathInput.value = "";
+        filterAuthorInput.value = "";
+        filterCommitInput.value = "";
+        filterDateStartInput.value = "";
+        filterDateEndInput.value = "";
+        // sortBySelect.value = 'date-desc'; // Optionally reset sort
+        // viewShowAuthorCheckbox.checked = true; // Optionally reset view toggles
+        // viewShowCommitCheckbox.checked = false;
+        // viewShowEntropyCheckbox.checked = false;
+        applyAllControls();
+      });
+
+      // Also apply on checkbox/select changes for view options for immediate feedback
+      [
+        sortBySelect,
+        viewShowAuthorCheckbox,
+        viewShowCommitCheckbox,
+        viewShowEntropyCheckbox,
+      ].forEach((el) => {
+        el.addEventListener("change", applyAllControls);
+      });
+
+      function applyAllControls() {
+        if (allLeaksData.length === 0 && !fileNameDisplay.textContent) {
+          // No file loaded yet
+          clearLeaksDisplay(false, "Please upload a Gitleaks JSON file first.");
+          return;
+        }
+        if (allLeaksData.length === 0 && fileNameDisplay.textContent) {
+          // File loaded but was empty
+          clearLeaksDisplay(
+            false,
+            `No leaks found in ${fileNameDisplay.textContent.replace("File: ", "")}.`,
+          );
+          return;
+        }
+
+        let filteredLeaks = [...allLeaksData];
+
+        // Apply filters
+        const ruleIdFilter = filterRuleIdInput.value.toLowerCase().trim();
+        if (ruleIdFilter) {
+          filteredLeaks = filteredLeaks.filter(
+            (leak) =>
+              leak.RuleID && leak.RuleID.toLowerCase().includes(ruleIdFilter),
+          );
+        }
+        const filePathFilter = filterFilePathInput.value.toLowerCase().trim();
+        if (filePathFilter) {
+          filteredLeaks = filteredLeaks.filter(
+            (leak) =>
+              leak.File && leak.File.toLowerCase().includes(filePathFilter),
+          );
+        }
+        const authorFilter = filterAuthorInput.value.toLowerCase().trim();
+        if (authorFilter) {
+          filteredLeaks = filteredLeaks.filter(
+            (leak) =>
+              leak.Author && leak.Author.toLowerCase().includes(authorFilter),
+          );
+        }
+        const commitFilter = filterCommitInput.value.toLowerCase().trim();
+        if (commitFilter) {
+          filteredLeaks = filteredLeaks.filter(
+            (leak) =>
+              leak.Commit && leak.Commit.toLowerCase().includes(commitFilter),
+          );
+        }
+        const dateStartFilter = filterDateStartInput.value;
+        if (dateStartFilter) {
+          filteredLeaks = filteredLeaks.filter(
+            (leak) =>
+              leak.Date && new Date(leak.Date) >= new Date(dateStartFilter),
+          );
+        }
+        const dateEndFilter = filterDateEndInput.value;
+        if (dateEndFilter) {
+          // Add 1 day to include the selected end date fully
+          const endDate = new Date(dateEndFilter);
+          endDate.setDate(endDate.getDate() + 1);
+          filteredLeaks = filteredLeaks.filter(
+            (leak) => leak.Date && new Date(leak.Date) < endDate,
+          );
+        }
+
+        // Apply sorting
+        const sortBy = sortBySelect.value;
+        switch (sortBy) {
+          case "date-desc":
+            filteredLeaks.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+            break;
+          case "date-asc":
+            filteredLeaks.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+            break;
+          case "rule-id-asc":
+            filteredLeaks.sort((a, b) =>
+              (a.RuleID || "").localeCompare(b.RuleID || ""),
+            );
+            break;
+          case "file-asc":
+            filteredLeaks.sort((a, b) =>
+              (a.File || "").localeCompare(b.File || ""),
+            );
+            break;
+          case "entropy-desc":
+            filteredLeaks.sort((a, b) => (b.Entropy || 0) - (a.Entropy || 0));
+            break;
+          case "entropy-asc":
+            filteredLeaks.sort((a, b) => (a.Entropy || 0) - (b.Entropy || 0));
+            break;
+        }
+
+        currentlyDisplayedLeaks = filteredLeaks;
+        displayLeaks(currentlyDisplayedLeaks);
+      }
+
+      // Display Leaks Logic
+      function displayLeaks(leaks) {
+        leaksContainer.innerHTML = ""; // Clear previous leaks or placeholders
+        const initialMessage = leaksContainer.querySelector(".initial-message");
+        if (initialMessage) initialMessage.remove();
+
+        if (leaks.length === 0) {
+          leaksContainer.innerHTML =
+            '<p class="text-center">No leaks match the current filters.</p>';
+          visualizationHeading.style.display = "block"; // Keep heading visible
+          leaksSummary.textContent = `Displaying 0 of ${allLeaksData.length} total leaks.`;
+          return;
+        }
+
+        visualizationHeading.style.display = "block";
+        leaksSummary.textContent = `Displaying ${leaks.length} of ${allLeaksData.length} total leaks.`;
+
+        const showAuthor = viewShowAuthorCheckbox.checked;
+        const showCommit = viewShowCommitCheckbox.checked;
+        const showEntropy = viewShowEntropyCheckbox.checked;
+
+        leaks.forEach((leak) => {
+          // Use originalIndex from the filtered leak data
+          const card = document.createElement("div");
+          card.classList.add("leak-card");
+          const ruleClass = `rule-${sanitizeHTML(leak.RuleID || "unknown")
+            .toLowerCase()
+            .replace(/[^a-z0-9-_]/g, "-")}`;
+          card.classList.add(ruleClass);
+          card.setAttribute("data-original-index", leak.originalIndex); // Use originalIndex
+          card.setAttribute("role", "button");
+          card.setAttribute("tabindex", "0");
+          card.setAttribute(
+            "aria-label",
+            `Leak details for rule ${sanitizeHTML(leak.RuleID || "Unknown")}`,
+          );
+
+          let cardHTML = `
+                    <h4>${sanitizeHTML(leak.RuleID || "Unknown Rule")}</h4>
+                    <p><span class="label">Description:</span> <span class="value">${sanitizeHTML(leak.Description || "N/A")}</span></p>
+                    <p><span class="label">File:</span> <span class="value">${sanitizeHTML(leak.File || "N/A")}</span></p>
+                    ${leak.StartLine ? `<p><span class="label">Line:</span> <span class="value">${sanitizeHTML(String(leak.StartLine))}</span></p>` : ""}
+                    <p><span class="label">Match:</span> <span class="value secret-match">${sanitizeHTML(leak.Match || "N/A").substring(0, 100)}${(leak.Match || "").length > 100 ? "..." : ""}</span></p>
+                `;
+
+          if (showAuthor && leak.Author) {
+            cardHTML += `<p><span class="label">Author:</span> <span class="value">${sanitizeHTML(leak.Author)}</span></p>`;
+          }
+          if (showCommit && leak.Commit) {
+            cardHTML += `<p><span class="label">Commit:</span> <span class="value">${sanitizeHTML(leak.Commit).substring(0, 12)}...</span></p>`;
+          }
+          if (showEntropy && leak.Entropy !== undefined) {
+            cardHTML += `<p><span class="label">Entropy:</span> <span class="value">${leak.Entropy.toFixed(3)}</span></p>`;
+          }
+          cardHTML += `<p class="card-footer-text mt-1"><small>Click for more details</small></p>`;
+
+          card.innerHTML = cardHTML;
+
+          card.addEventListener("click", () => openModal(leak.originalIndex));
+          card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              openModal(leak.originalIndex);
+            }
+          });
+          leaksContainer.appendChild(card);
+        });
+      }
+
+      function getRuleSpecificRecommendation(ruleId) {
+        const lowerRuleId = (ruleId || "").toLowerCase();
+        if (
+          lowerRuleId.includes("api-key") ||
+          lowerRuleId.includes("token") ||
+          lowerRuleId.includes("secret")
+        ) {
+          return "Immediately revoke the exposed key/token. Investigate its usage and potential exposure. Rotate credentials and consider using a secrets management system. Remove the secret from Git history.";
+        }
+        if (lowerRuleId.includes("jwt")) {
+          return "The exposed JWT might be active. Invalidate the token if possible. Analyze the token's payload for sensitive information. Ensure JWTs have short lifespans and are not committed to repositories. Remove the secret from Git history.";
+        }
+        if (
+          lowerRuleId.includes("ssh") ||
+          lowerRuleId.includes("private-key")
+        ) {
+          return "This is a critical exposure. Revoke the private key immediately. Check all systems where this key might have been used. Generate a new key pair. Remove the secret from Git history.";
+        }
+        if (lowerRuleId.includes("password")) {
+          return "Change the password immediately. If it's a hardcoded password for a service account, rotate it and use environment variables or a secrets manager. Remove the secret from Git history.";
+        }
+        return "Review the finding type. Remove the secret from the repository's history. Educate developers on secure coding practices and secret management. Consider if this rule needs tuning for your environment.";
+      }
+
+      // Modal Logic
+      function openModal(originalIndex) {
+        // Use originalIndex to fetch from allLeaksData
+        const leak = allLeaksData.find(
+          (l) => l.originalIndex === originalIndex,
+        );
+        if (!leak) return;
+
+        modalTitle.textContent = `Details for: ${sanitizeHTML(leak.RuleID || "Unknown Rule")}`;
+
+        let modalHtml = `
+                <p><span class="label">Description:</span> <span class="value">${sanitizeHTML(leak.Description || "N/A")}</span></p>
+                <p><span class="label">File:</span> <span class="value">${sanitizeHTML(leak.File || "N/A")}</span></p>
+                ${leak.SymlinkFile ? `<p><span class="label">Symlink File:</span> <span class="value">${sanitizeHTML(leak.SymlinkFile)}</span></p>` : ""}
+                <p><span class="label">Line:</span> <span class="value">${leak.StartLine || "N/A"}${leak.EndLine && leak.EndLine !== leak.StartLine ? ` - ${leak.EndLine}` : ""}</span></p>
+                <p><span class="label">Column:</span> <span class="value">${leak.StartColumn || "N/A"}${leak.EndColumn && leak.EndColumn !== leak.StartColumn ? ` - ${leak.EndColumn}` : ""}</span></p>
+                <p><span class="label">Match:</span> <span class="value match">${sanitizeHTML(leak.Match || "N/A")}</span></p>
+                <p><span class="label">Secret:</span> <span class="value secret">${sanitizeHTML(leak.Secret || "N/A")}</span></p>
+                <p><span class="label">Commit:</span> <span class="value">${sanitizeHTML(leak.Commit || "N/A")}</span></p>
+                <p><span class="label">Entropy:</span> <span class="value">${leak.Entropy !== undefined ? leak.Entropy.toFixed(5) : "N/A"}</span></p>
+                <p><span class="label">Author:</span> <span class="value">${sanitizeHTML(leak.Author || "N/A")}</span></p>
+                <p><span class="label">Email:</span> <span class="value">${sanitizeHTML(leak.Email || "N/A")}</span></p>
+                <p><span class="label">Date:</span> <span class="value">${leak.Date ? new Date(leak.Date).toLocaleString() : "N/A"}</span></p>
+                <p><span class="label">Message:</span> <span class="value">${sanitizeHTML(leak.Message || "N/A")}</span></p>
+                <p><span class="label">Tags:</span> <span class="value">${leak.Tags && leak.Tags.length > 0 ? leak.Tags.map(sanitizeHTML).join(", ") : "None"}</span></p>
+                <p><span class="label">Fingerprint:</span> <span class="value">${sanitizeHTML(leak.Fingerprint || "N/A")}</span></p>
+                
+                <div class="recommendation">
+                    <h5>Recommendation:</h5>
+                    <p>${getRuleSpecificRecommendation(leak.RuleID)}</p>
+                </div>
+            `;
+        modalBody.innerHTML = modalHtml;
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+        closeButton.focus();
+      }
+
+      function closeModal() {
+        modal.style.display = "none";
+        document.body.style.overflow = "auto";
+      }
+
+      closeButton.addEventListener("click", closeModal);
+      closeButton.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          closeModal();
+        }
+      });
+
+      window.addEventListener("click", (event) => {
+        if (event.target === modal) {
+          closeModal();
+        }
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal.style.display === "flex") {
+          closeModal();
+        }
+      });
+
+      // Initialize display
+      clearLeaksDisplay();
+    </script>
+  </body>
+</html>
